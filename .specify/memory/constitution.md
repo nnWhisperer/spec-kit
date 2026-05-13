@@ -1,27 +1,35 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0
-Bump rationale: MINOR — Principle III's invariant (interactive phases stay
-  out of the subagent pool) is unchanged, but its guidance is expanded to
-  specify the orchestrator's role: it actively invokes the interactive
-  phase in-session via the Skill tool, rather than waiting for the user
-  to type the slash command. No prior rule is removed or inverted.
+Version change: 1.1.0 → 1.1.1
+Bump rationale: PATCH — Principle III's invariant is unchanged; the
+  refinement is a list expansion. `constitution` is now also in the
+  generator's SKIP_PHASES alongside `clarify`, because it is a project-
+  bootstrap phase that (a) requires interactive Q&A and (b) must run with
+  main-session context to make informed amendment decisions. The
+  /speckit-flow orchestrator explicitly never invokes it; the user
+  triggers /speckit-constitution directly when needed. The generator now
+  produces 7 phase subagents (down from 8 in v1.1.0).
 Modified principles:
-  - III. Interactive Phases Stay User-Typed
-      → III. Interactive Phases Run In-Session (Orchestrator-Invoked)
+  - III. text expanded to cite both `clarify` AND `constitution` as
+    members of the in-session phase set; mechanism unchanged.
 Added sections: (none)
 Removed sections: (none)
 Templates reviewed for alignment:
   - ✅ .specify/memory/constitution.md (this file)
-  - ✅ scripts/bash/build-claude-agents.sh (clarify retained in SKIP_PHASES with updated comment explaining the in-session/Skill-tool model)
-  - ✅ .claude/commands/speckit-flow.md (Phase 2 invokes clarify via the Skill tool; operating rules updated to mark clarify as the sole in-session exception)
-  - n/a .specify/templates/plan-template.md (its "Constitution Check" placeholder is driven dynamically from this file)
-  - n/a .specify/templates/spec-template.md / tasks-template.md (concern content, not workflow execution)
-  - n/a .specify/templates/commands/*.md (Principle II forbids fork-specific edits here)
+  - ✅ scripts/bash/build-claude-agents.sh (SKIP_PHASES now lists clarify
+       and constitution, each with rationale in the comment block)
+  - ✅ .claude/commands/speckit-flow.md (input handling simplified:
+       $ARGUMENTS is the feature specification, passed verbatim to
+       speckit-specify; new operating rules forbid speckit-constitution
+       invocation and forbid pre-parsing $ARGUMENTS)
+  - n/a .specify/templates/plan-template.md (its "Constitution Check"
+       placeholder is driven dynamically from this file)
+  - n/a .specify/templates/spec-template.md / tasks-template.md
+  - n/a .specify/templates/commands/*.md (Principle II forbids fork edits)
 Follow-up TODOs:
-  - TODO(PROJECT_NAME): "Spec Kit Subagent Fork" is a working name. Rename when the fork has a settled identity.
-  - TODO(RATIFICATION_DATE): set to 2026-05-13. Confirm this is the intended governance start date.
+  - TODO(PROJECT_NAME): "Spec Kit Subagent Fork" is a working name.
+  - TODO(RATIFICATION_DATE): set to 2026-05-13. Confirm.
 -->
 
 # Spec Kit Subagent Fork Constitution
@@ -40,11 +48,17 @@ Subagent files under `.claude/agents/speckit-*.md` MUST be generated mechanicall
 
 Rationale: protects against drift from upstream and keeps the fork merge-compatible with `github/spec-kit`. The generator is the only authorised adapter layer.
 
-### III. Interactive Phases Run In-Session (Orchestrator-Invoked)
+### III. Interactive Phases Run In-Session (Orchestrator-Invoked Where In Scope)
 
-Phases requiring interactive question-and-answer with the human (currently `clarify`) MUST NOT be subagent-ified, and MUST be retained in the generator's `SKIP_PHASES`. They MUST remain installed as slash commands / skills (`.claude/skills/speckit-<phase>/SKILL.md`) so the orchestrator (`/speckit-flow`) can invoke them via the `Skill` tool. When so invoked, their body expands inline in the main session, inheriting the orchestrator's full conversational context. The orchestrator MUST NOT pause and ask the user to manually type the slash command; it MUST invoke the skill itself at the appropriate point in the flow.
+Phases requiring interactive question-and-answer with the human — currently `clarify` and `constitution` — MUST NOT be subagent-ified, and MUST be retained in the generator's `SKIP_PHASES`. They MUST remain installed as slash commands / skills (`.claude/skills/speckit-<phase>/SKILL.md`).
 
-Rationale: interactive phases need rich context — the user's feature description, what `specify` produced, prior discussion — to ask well-targeted questions and to reply to the user's follow-ups in detail. Isolating them in a subagent would strip that context. The trade-off is intentional: only non-interactive phases pay the cost of context isolation. Orchestrator-driven invocation (rather than user-typed) keeps the flow continuous and removes a manual hand-off step.
+Phases that fall **within the per-feature flow** (currently only `clarify`) MUST be invoked by the orchestrator (`/speckit-flow`) via the `Skill` tool at the appropriate point — the orchestrator MUST NOT pause and ask the user to manually type the slash command.
+
+Phases that fall **outside the per-feature flow** (currently only `constitution`) MUST NEVER be invoked by the orchestrator. They are user-triggered only (via `/speckit-constitution`). The orchestrator's scope is **per-feature** work; project-bootstrap work is explicitly out of scope.
+
+When an in-scope interactive phase is invoked from the orchestrator, its body expands inline in the main session, inheriting the orchestrator's full conversational context.
+
+Rationale: interactive phases need rich context — the spec content, prior discussion, accumulated state — to ask well-targeted questions and reply to follow-ups in detail. Isolating them in a subagent would strip that context. The trade-off is intentional: only non-interactive per-feature phases pay the cost of context isolation. Excluding `constitution` from the orchestrator's flow keeps the orchestrator's scope tight (per-feature only) and prevents accidental constitution changes during what the user expects to be a feature build.
 
 ### IV. Orchestrator Delegates, Never Edits
 
@@ -88,4 +102,4 @@ All PRs touching `.claude/agents/`, `.claude/commands/speckit-flow.md`, `scripts
 
 Merging upstream changes MUST be followed by re-running the generator and reviewing whether new phases require entries in `PHASE_TOOLS` or `SKIP_PHASES`.
 
-**Version**: 1.1.0 | **Ratified**: 2026-05-13 | **Last Amended**: 2026-05-13
+**Version**: 1.1.1 | **Ratified**: 2026-05-13 | **Last Amended**: 2026-05-13

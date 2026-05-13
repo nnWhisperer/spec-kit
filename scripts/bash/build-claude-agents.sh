@@ -40,9 +40,13 @@ OUT_DIR="${OUT_DIR:-.claude/agents}"
 # orchestrated in-session as skills/slash commands instead. The orchestrator
 # invokes them via the Skill tool so their bodies expand inline in the main
 # session, sharing the orchestrator's full conversational context.
-# clarify is in this list because it must dialogue with the user using full
-# session context (feature description, specify output, prior discussion).
-SKIP_PHASES=(clarify)
+#
+# - clarify: must dialogue with the user using full session context
+#   (feature description, specify output, prior discussion).
+# - constitution: project-bootstrap, not per-feature workflow. It is
+#   interactive (collects principles/values) and benefits from main-session
+#   context. The /speckit-flow orchestrator never invokes it.
+SKIP_PHASES=(clarify constitution)
 
 # Tool surface per phase. Phases not listed get DEFAULT_TOOLS.
 # Notably, Agent is omitted from every phase to prevent recursive spawning.
