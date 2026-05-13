@@ -1,21 +1,39 @@
 #!/usr/bin/env bash
-# Generate Claude Code subagent files from spec-kit command templates.
+# Generate Claude Code subagent files from spec-kit command sources.
 #
-# Reads:  $SRC_DIR/<phase>.md          (default: templates/commands)
+# Reads:  $SRC_DIR — layout auto-detected as either:
+#           flat:  $SRC_DIR/<phase>.md                 (e.g. templates/commands,
+#                                                       used in spec-kit dev)
+#           skill: $SRC_DIR/speckit-<phase>/SKILL.md   (e.g. .claude/skills,
+#                                                       used in any speckit-
+#                                                       installed project)
+#         If SRC_DIR is unset, tries templates/commands first, then
+#         .claude/skills. Extension skills (anything with a hyphen left
+#         in the phase name after stripping "speckit-", e.g. speckit-git-*)
+#         are silently skipped — only workflow phases are processed.
 # Writes: $OUT_DIR/speckit-<phase>.md  (default: .claude/agents)
 #
 # Each generated agent is invokable via the Agent tool with
 # subagent_type=speckit-<phase>, giving an isolated context per phase.
-# Bodies are copied verbatim from the source command templates; only the
-# frontmatter is rewritten to match the subagent schema.
+# Bodies are copied verbatim from the source; only the frontmatter is
+# rewritten to match the subagent schema.
 #
 # Run from the project root:
 #     bash scripts/bash/build-claude-agents.sh
-# Re-run whenever templates/commands/*.md changes.
+# Re-run whenever the source changes (e.g. after a speckit update).
 
 set -euo pipefail
 
-SRC_DIR="${SRC_DIR:-templates/commands}"
+# Auto-detect SRC_DIR when not provided.
+if [[ -z "${SRC_DIR:-}" ]]; then
+  if [[ -d "templates/commands" ]]; then
+    SRC_DIR="templates/commands"
+  elif [[ -d ".claude/skills" ]]; then
+    SRC_DIR=".claude/skills"
+  else
+    SRC_DIR="templates/commands"  # keep for the error message below
+  fi
+fi
 OUT_DIR="${OUT_DIR:-.claude/agents}"
 
 # Phases listed here are not generated as subagents because they are
@@ -51,12 +69,16 @@ is_skipped() {
   return 1
 }
 
-# First "description:" line inside the source frontmatter block.
+# First "description:" line inside the source frontmatter block. Tolerates
+# values with or without surrounding double/single quotes (flat layout is
+# unquoted; skill SKILL.md files use double quotes).
 extract_description() {
   awk '
     /^---$/ { c++; if (c==2) exit; next }
     c==1 && /^description:[[:space:]]/ {
       sub(/^description:[[:space:]]*/, "")
+      if (sub(/^"/, "")) sub(/"$/, "")
+      else if (sub(/^'\''/, "")) sub(/'\''$/, "")
       print
       exit
     }
@@ -81,16 +103,38 @@ yaml_double_quote() {
 
 count=0
 skipped=0
+# Detect layout: flat (<phase>.md at SRC_DIR root) vs skill
+# (speckit-<phase>/SKILL.md subdirectories).
 shopt -s nullglob
-sources=("$SRC_DIR"/*.md)
+flat_sources=("$SRC_DIR"/*.md)
+skill_sources=("$SRC_DIR"/speckit-*/SKILL.md)
 shopt -u nullglob
-if [[ ${#sources[@]} -eq 0 ]]; then
-  echo "error: no .md files in $SRC_DIR" >&2
+
+if [[ ${#flat_sources[@]} -gt 0 ]]; then
+  layout="flat"
+  sources=("${flat_sources[@]}")
+elif [[ ${#skill_sources[@]} -gt 0 ]]; then
+  layout="skill"
+  sources=("${skill_sources[@]}")
+else
+  echo "error: no command sources in $SRC_DIR" >&2
+  echo "       expected <phase>.md (flat) or speckit-<phase>/SKILL.md (skill)" >&2
   exit 1
 fi
 
 for src in "${sources[@]}"; do
-  phase="$(basename "$src" .md)"
+  if [[ "$layout" == "flat" ]]; then
+    phase="$(basename "$src" .md)"
+  else
+    phase="$(basename "$(dirname "$src")")"
+    phase="${phase#speckit-}"
+    # Workflow phase names are single tokens; anything with a remaining
+    # hyphen is an extension command skill (e.g. speckit-git-commit), not
+    # a workflow phase. Skip silently.
+    case "$phase" in
+      *-*) continue ;;
+    esac
+  fi
 
   if is_skipped "$phase"; then
     echo "skip   speckit-$phase (in SKIP_PHASES)"
