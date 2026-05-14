@@ -1,8 +1,20 @@
-# Maintainer-side workflow: re-bake the seven subagent-flow agent files from
-# upstream `templates/commands/*.md` and surface drift via PR.
+# Maintainer-side workflow: keep an upstream-tracking branch on origin in sync
+# with `github/spec-kit:main`, then re-bake the seven subagent-flow agent files
+# from that tracked content and surface drift via PR.
 #
-# This is the maintainer infrastructure side of the subagent-flow extension;
-# it does NOT ship inside the extension payload.
+# Two-branch model:
+#   - origin/main          — fork's working main (extension lives here)
+#   - origin/upstream-main — pure mirror of `github/spec-kit:main`, force-pushed
+#                            by this workflow; bot-owned, no other writers
+#
+# Each run: (1) mirror upstream/main → origin/upstream-main, (2) check out
+# upstream-main in a worktree, (3) run the generator against the worktree's
+# templates/commands/, (4) detect drift against main's
+# extensions/subagent-flow/agents/, (5) open a PR if drift detected.
+#
+# This decouples upstream drift detection from the fork's merge cadence — even
+# if main has never merged upstream, the resync PRs keep the baked agents fresh
+# against whatever upstream currently is.
 #
 # act-compatible (constraint #1):
 #   - `workflow_dispatch` is the primary trigger (works under act);
@@ -20,7 +32,7 @@ name: subagent-flow agents resync
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 6 * * 1" # every Monday at 06:00 UTC
+    - cron: "0 6 * * *" # daily at 06:00 UTC
 
 jobs:
   resync:
@@ -29,12 +41,32 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Re-bake subagent-flow agents from upstream templates
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Mirror upstream/main → origin/upstream-main
+        run: |
+          git remote add upstream https://github.com/github/spec-kit.git
+          git fetch upstream main
+          # Force-push because upstream-main is a pure mirror branch.
+          # Nothing else writes to it; force is intended.
+          git push origin upstream/main:refs/heads/upstream-main --force
+
+      - name: Check out upstream-main in a worktree
+        run: |
+          git fetch origin upstream-main
+          git worktree add ../upstream-main upstream-main
+
+      - name: Re-bake agents from upstream-main templates
         env:
-          SRC_DIR: templates/commands
+          SRC_DIR: ../upstream-main/templates/commands
           OUT_DIR: extensions/subagent-flow/agents
         run: |
           bash extensions/subagent-flow/scripts/bash/build-claude-agents.sh
@@ -57,9 +89,15 @@ jobs:
           commit-message: "chore(subagent-flow): resync agents against upstream"
           title: "chore(subagent-flow): resync agents against upstream"
           body: |
-            Automated re-bake of `extensions/subagent-flow/agents/` against the
-            current `templates/commands/*.md`. Review the diff to confirm the
-            upstream drift is intentional before merging.
+            Automated re-bake of `extensions/subagent-flow/agents/` against
+            `upstream-main` (a mirror of `github/spec-kit:main` maintained by
+            the `subagent-flow agents resync` workflow).
+
+            Compare upstream drift:
+            https://github.com/nnWhisperer/spec-kit/compare/main...upstream-main
+
+            Review the diff to confirm the upstream changes are intended
+            before merging.
           branch: chore/subagent-flow-resync
           base: main
           add-paths: |
