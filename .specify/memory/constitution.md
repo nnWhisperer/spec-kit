@@ -1,35 +1,34 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.1.0 → 1.1.1
-Bump rationale: PATCH — Principle III's invariant is unchanged; the
-  refinement is a list expansion. `constitution` is now also in the
-  generator's SKIP_PHASES alongside `clarify`, because it is a project-
-  bootstrap phase that (a) requires interactive Q&A and (b) must run with
-  main-session context to make informed amendment decisions. The
-  /speckit-flow orchestrator explicitly never invokes it; the user
-  triggers /speckit-constitution directly when needed. The generator now
-  produces 7 phase subagents (down from 8 in v1.1.0).
+Version change: 1.1.1 → 1.1.2
+Bump rationale: PATCH — documentation defect fix surfaced by /speckit-analyze
+  (finding C1) during the subagent-flow extension's feature flow. Principle I
+  previously enumerated `constitution` among non-interactive subagent phases,
+  contradicting Principle III which places `constitution` in SKIP_PHASES as an
+  interactive in-session phase. All shipped artifacts (the generator's
+  SKIP_PHASES, the /speckit.subagent-flow.run orchestrator's "Never invoke
+  speckit-constitution" operating rule, the seven baked agent files which
+  exclude constitution) already implement Principle III's reading; Principle
+  I's enumeration was the defect. No principle semantics change; only the
+  enumeration text in Principle I is shortened to align with implementation.
 Modified principles:
-  - III. text expanded to cite both `clarify` AND `constitution` as
-    members of the in-session phase set; mechanism unchanged.
+  - I. Subagent Phase Isolation — enumeration shortened from 8 phases to 7 by
+    removing `constitution`. Title, MUST rule, and rationale unchanged.
 Added sections: (none)
 Removed sections: (none)
 Templates reviewed for alignment:
   - ✅ .specify/memory/constitution.md (this file)
-  - ✅ scripts/bash/build-claude-agents.sh (SKIP_PHASES now lists clarify
-       and constitution, each with rationale in the comment block)
-  - ✅ .claude/commands/speckit-flow.md (input handling simplified:
-       $ARGUMENTS is the feature specification, passed verbatim to
-       speckit-specify; new operating rules forbid speckit-constitution
-       invocation and forbid pre-parsing $ARGUMENTS)
-  - n/a .specify/templates/plan-template.md (its "Constitution Check"
-       placeholder is driven dynamically from this file)
+  - ✅ extensions/subagent-flow/scripts/bash/build-claude-agents.sh
+       (SKIP_PHASES comment now cites Principle I as authority — both
+       principles now agree, and Principle I is NON-NEGOTIABLE)
+  - ✅ .specify/extensions/subagent-flow/scripts/bash/build-claude-agents.sh
+       (deployed mirror of the source above; kept in sync)
+  - n/a .specify/templates/plan-template.md (driven dynamically from this file)
   - n/a .specify/templates/spec-template.md / tasks-template.md
   - n/a .specify/templates/commands/*.md (Principle II forbids fork edits)
 Follow-up TODOs:
   - TODO(PROJECT_NAME): "Spec Kit Subagent Fork" is a working name.
-  - TODO(RATIFICATION_DATE): set to 2026-05-13. Confirm.
 -->
 
 # Spec Kit Subagent Fork Constitution
@@ -38,7 +37,7 @@ Follow-up TODOs:
 
 ### I. Subagent Phase Isolation (NON-NEGOTIABLE)
 
-Each non-interactive speckit phase — `specify`, `plan`, `tasks`, `analyze`, `implement`, `checklist`, `constitution`, `taskstoissues` — MUST execute in an isolated subagent context spawned via the Agent tool with `subagent_type=speckit-<phase>`. Phases MUST NOT share conversational state; cross-phase handoff occurs exclusively through artifacts on disk under `specs/<NNN-feature>/`.
+Each non-interactive speckit phase — `specify`, `plan`, `tasks`, `analyze`, `implement`, `checklist`, `taskstoissues` — MUST execute in an isolated subagent context spawned via the Agent tool with `subagent_type=speckit-<phase>`. Phases MUST NOT share conversational state; cross-phase handoff occurs exclusively through artifacts on disk under `specs/<NNN-feature>/`. Interactive phases (`clarify`, `constitution`) are NOT in scope here — they are governed by Principle III.
 
 Rationale: prevents context pollution and makes the workflow reproducible and resumable. Each phase's output depends only on disk state, not on the orchestrator's chat history.
 
@@ -102,4 +101,4 @@ All PRs touching `.claude/agents/`, `.claude/commands/speckit-flow.md`, `scripts
 
 Merging upstream changes MUST be followed by re-running the generator and reviewing whether new phases require entries in `PHASE_TOOLS` or `SKIP_PHASES`.
 
-**Version**: 1.1.1 | **Ratified**: 2026-05-13 | **Last Amended**: 2026-05-13
+**Version**: 1.1.2 | **Ratified**: 2026-05-13 | **Last Amended**: 2026-05-14

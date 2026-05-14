@@ -41,6 +41,12 @@ OUT_DIR="${OUT_DIR:-.claude/agents}"
 # invokes them via the Skill tool so their bodies expand inline in the main
 # session, sharing the orchestrator's full conversational context.
 #
+# Authority: Constitution Principle I (Subagent Phase Isolation,
+# NON-NEGOTIABLE) enumerates the seven non-interactive phases that MUST
+# run as subagents — `clarify` and `constitution` are NOT in that list
+# because they are interactive. Principle III gives the operational rule
+# (in-session expansion via the Skill tool). Both principles agree.
+#
 # - clarify: must dialogue with the user using full session context
 #   (feature description, specify output, prior discussion).
 # - constitution: project-bootstrap, not per-feature workflow. It is
