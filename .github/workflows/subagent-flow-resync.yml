@@ -1,0 +1,66 @@
+# Maintainer-side workflow: re-bake the seven subagent-flow agent files from
+# upstream `templates/commands/*.md` and surface drift via PR.
+#
+# This is the maintainer infrastructure side of the subagent-flow extension;
+# it does NOT ship inside the extension payload.
+#
+# act-compatible (constraint #1):
+#   - `workflow_dispatch` is the primary trigger (works under act);
+#   - `schedule` is for hands-off operation on GitHub (ignored by act);
+#   - runner is `ubuntu-latest` (act's default);
+#   - actions are pinned to versions act is known to support;
+#   - no `pull_request_target`, no GitHub-only runners or services.
+#
+# Local-verification command (documented in extension README):
+#   act workflow_dispatch -W .github/workflows/subagent-flow-resync.yml \
+#       --container-architecture linux/amd64
+
+name: subagent-flow agents resync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1" # every Monday at 06:00 UTC
+
+jobs:
+  resync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Re-bake subagent-flow agents from upstream templates
+        env:
+          SRC_DIR: templates/commands
+          OUT_DIR: extensions/subagent-flow/agents
+        run: |
+          bash extensions/subagent-flow/scripts/bash/build-claude-agents.sh
+
+      - name: Detect drift
+        id: drift
+        run: |
+          if git diff --quiet extensions/subagent-flow/agents/; then
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+            echo "No drift detected; nothing to do."
+          else
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+            echo "Drift detected; will open a PR."
+          fi
+
+      - name: Open resync PR
+        if: steps.drift.outputs.drift == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(subagent-flow): resync agents against upstream"
+          title: "chore(subagent-flow): resync agents against upstream"
+          body: |
+            Automated re-bake of `extensions/subagent-flow/agents/` against the
+            current `templates/commands/*.md`. Review the diff to confirm the
+            upstream drift is intentional before merging.
+          branch: chore/subagent-flow-resync
+          base: main
+          add-paths: |
+            extensions/subagent-flow/agents/

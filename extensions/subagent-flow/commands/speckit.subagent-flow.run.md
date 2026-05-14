@@ -1,8 +1,45 @@
 ---
-description: Orchestrate the speckit per-feature workflow end-to-end (specify → clarify → plan → tasks → optional analyze → implement). Delegates non-interactive phases to isolated subagents and invokes the interactive clarify phase in-session via the Skill tool.
+description: Run the per-feature orchestrator end-to-end (specify → clarify → plan → tasks → optional analyze → implement).
 ---
 
 # Speckit flow
+
+## Phase 0 — bootstrap subagent files (silent unless install corrupted)
+
+Before any other step in this command, run the following Bash block **once**, from the project root, via the `Bash` tool. It silently deploys the seven baked subagent files from the extension's source directory into `.claude/agents/` so that the `Agent` tool calls in later phases can resolve `subagent_type=speckit-<phase>`. Under the happy path (fresh install or up-to-date deployed copies) it produces no output and exits 0; under stale-deploy or missing-deployed-copy it silently `cp`s the source over the deployed copy and exits 0. The only user-visible failure path is "source directory missing or partial" (interrupted install / hand-deleted extension dir), in which case the block emits a multiline error pointing at the recovery command and exits 1 — do **not** invoke any subagent in that case; surface the error verbatim and stop.
+
+```bash
+SRC=.specify/extensions/subagent-flow/agents
+DST=.claude/agents
+if [ ! -d "$SRC" ]; then
+  {
+    echo "ERROR: subagent-flow source directory is missing or was deleted:"
+    for p in specify plan tasks analyze implement checklist taskstoissues; do
+      echo "  missing source: $SRC/speckit-$p.md"
+    done
+    echo "  recovery: specify extension add subagent-flow"
+    echo "  see also: .specify/extensions/subagent-flow/README.md"
+  } >&2
+  exit 1
+fi
+mkdir -p "$DST"
+for p in specify plan tasks analyze implement checklist taskstoissues; do
+  s="$SRC/speckit-$p.md"
+  d="$DST/speckit-$p.md"
+  if [ ! -f "$s" ]; then
+    {
+      echo "ERROR: subagent-flow source file is missing:"
+      echo "  missing source: $s"
+      echo "  recovery: specify extension add subagent-flow"
+      echo "  see also: .specify/extensions/subagent-flow/README.md"
+    } >&2
+    exit 1
+  fi
+  cmp -s "$s" "$d" || cp "$s" "$d"
+done
+```
+
+After this block completes with exit 0, proceed to Phase 1 below. The block is intentionally inline (not a separate script) so the bootstrap is visible to anyone reading the orchestrator body, and so it shares the body's "verbatim with three edits" provenance from the fork's original `/speckit-flow` command.
 
 The user's input is below.
 
@@ -61,11 +98,11 @@ If no, go straight to phase 6.
 
 Implementation may run across several sittings — each one is an isolated `speckit-implement` invocation, which preserves context budget per subagent. The loop ends when `tasks.md` has no remaining unchecked tasks. Inform the user of this up-front before the first sitting.
 
-1. **Entry guard.** Before invoking any subagent, run `bash scripts/bash/count-open-tasks.sh <feature-dir>/tasks.md` to get the initial unchecked-task count. If the result is `0` (the helper also returns `0` if the file is missing), skip the loop entirely and tell the user there is nothing to implement (e.g., "`tasks.md` has no remaining work — nothing to implement.").
+1. **Entry guard.** Before invoking any subagent, run `bash .specify/extensions/subagent-flow/scripts/bash/count-open-tasks.sh <feature-dir>/tasks.md` to get the initial unchecked-task count. If the result is `0` (the helper also returns `0` if the file is missing), skip the loop entirely and tell the user there is nothing to implement (e.g., "`tasks.md` has no remaining work — nothing to implement.").
 
 2. **Sitting loop.** Otherwise, enter the loop. Hold a 1-based `K` (sitting counter) in working memory for this turn, starting at `1`. For each iteration:
 
-   a. Capture `OPEN_BEFORE` by running `bash scripts/bash/count-open-tasks.sh <feature-dir>/tasks.md`.
+   a. Capture `OPEN_BEFORE` by running `bash .specify/extensions/subagent-flow/scripts/bash/count-open-tasks.sh <feature-dir>/tasks.md`.
    b. Invoke `Agent` with `subagent_type=speckit-implement`. Prompt: `"Execute tasks.md."` — deliberately weaker than the legacy `"Execute tasks.md to completion."`; dropping "to completion" lets the subagent self-pace within one sitting (see `specs/001-chunked-implement/research.md` Decision 1).
    c. When the subagent returns, capture `OPEN_AFTER` by re-running the helper.
    d. **Zero-progress safeguard.** If `OPEN_AFTER >= OPEN_BEFORE`, halt the loop. Emit a message such as `"Sitting K returned with no on-disk progress — tasks.md still has M unchecked tasks. Halting. Re-run /speckit-flow after addressing the blocker."` and proceed to step 3 (post-loop steps), but note in the final summary that the implementation is incomplete. Do **not** auto-retry the same invocation.

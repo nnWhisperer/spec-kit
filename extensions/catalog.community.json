@@ -2746,6 +2746,36 @@
       "created_at": "2026-04-08T15:05:14Z",
       "updated_at": "2026-04-08T15:05:14Z"
     },
+    "subagent-flow": {
+      "name": "Subagent Flow Orchestrator",
+      "id": "subagent-flow",
+      "description": "Per-feature orchestrator that runs specify → clarify → plan → tasks → analyze → implement as isolated subagents with a chunked implement loop.",
+      "author": "subagent-flow maintainers",
+      "version": "1.0.0",
+      "download_url": "https://github.com/nnWhisperer/spec-kit/releases/download/subagent-flow-v1.0.0/subagent-flow.zip",
+      "repository": "https://github.com/nnWhisperer/spec-kit",
+      "homepage": "https://github.com/nnWhisperer/spec-kit/tree/main/extensions/subagent-flow",
+      "documentation": "https://github.com/nnWhisperer/spec-kit/blob/main/extensions/subagent-flow/README.md",
+      "license": "MIT",
+      "requires": {
+        "speckit_version": ">=0.2.0"
+      },
+      "provides": {
+        "commands": 1,
+        "hooks": 0
+      },
+      "tags": [
+        "orchestrator",
+        "subagent",
+        "workflow",
+        "claude-code"
+      ],
+      "verified": false,
+      "downloads": 0,
+      "stars": 0,
+      "created_at": "2026-05-13T00:00:00Z",
+      "updated_at": "2026-05-13T00:00:00Z"
+    },
     "superb": {
       "name": "Superpowers Bridge",
       "id": "superb",

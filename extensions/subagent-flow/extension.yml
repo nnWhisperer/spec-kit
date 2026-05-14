@@ -1,0 +1,92 @@
+# Contract: extension.yml for the subagent-flow extension
+# =========================================================
+#
+# This is the canonical, deterministic skeleton of the extension manifest.
+# It is the only external interface this package exposes. Spec-kit's
+# ExtensionManifest parser (src/specify_cli/extensions.py) validates a real
+# installation against this shape.
+#
+# All fields below are schema 1.0 fields the existing ExtensionManifest
+# validator already interprets. The extension uses NO custom keys, NO schema
+# extensions, and NO install-lifecycle hooks. Subagent-file provisioning
+# (.claude/agents/speckit-<phase>.md) is handled by the orchestrator's own
+# command body — an inline bash bootstrap block at the top of
+# commands/speckit.subagent-flow.run.md performs cmp -s + cp on every
+# invocation, transparently populating .claude/agents/ on first run and
+# refreshing it on upgrade. This is Path 3 per research.md Decision 6 +
+# Decision 9. The manifest is intentionally inert with respect to agent-file
+# deployment: nothing here triggers the bootstrap; the orchestrator owns it
+# end to end.
+
+schema_version: "1.0"
+
+extension:
+  id: subagent-flow                            # Per Clarifications Q1; pattern ^[a-z0-9-]+$
+  name: "Subagent Flow Orchestrator"
+  version: "1.0.0"                             # Initial release; bumped on each agent-body change
+  description: "Per-feature orchestrator that runs specify → clarify → plan → tasks → analyze → implement as isolated subagents with a chunked implement loop."
+  author: "subagent-flow maintainers"          # Replace with concrete handle/org at release time
+  repository: "https://github.com/nnWhisperer/spec-kit"
+  license: "MIT"
+  homepage: "https://github.com/nnWhisperer/spec-kit/tree/main/extensions/subagent-flow"
+
+requires:
+  speckit_version: ">=0.2.0"                   # FR-014. Matches the bundled `git` extension's floor.
+  # requires.tools is intentionally empty per FR-014: this extension calls no
+  # MCP servers and no third-party CLIs. Host-agent capability (the Agent tool
+  # for subagent delegation and the Skill tool for inline clarify) is
+  # documented narratively in README, NOT declared here — the schema's tools
+  # block is reserved for MCP/CLI tooling. Install does not gate on host
+  # capability; the failure surfaces at orchestrator-invocation time.
+  # (See research.md Decision 4.)
+  tools: []
+
+provides:
+  # The single registered slash command. Pattern: speckit.{ext-id}.{cmd-name}.
+  # FR-003 + FR-009 require exactly one command, namespaced under subagent-flow.
+  commands:
+    - name: "speckit.subagent-flow.run"
+      file: "commands/speckit.subagent-flow.run.md"
+      description: "Run the per-feature orchestrator end-to-end (specify → clarify → plan → tasks → optional analyze → implement)."
+
+  # No `config` block: the extension ships no config file. Behaviour is fully
+  # determined by the orchestrator body and the project's existing layout.
+  #
+  # No `agents` block: subagent-file provisioning is NOT declared in the
+  # manifest. See research.md Decision 6 + Decision 9 — the orchestrator's
+  # own command body contains an inline bash bootstrap (~10 lines: `for`
+  # loop, `cmp -s`, `cp`) that handles all provisioning transparently on
+  # every invocation. The seven pre-baked agent files ship inside the
+  # extension at `agents/speckit-<phase>.md`; spec-kit's installer copies
+  # them into `.specify/extensions/subagent-flow/agents/` (the source copy);
+  # the orchestrator's bootstrap copies them from there into
+  # `.claude/agents/` (the deployed copy) on first invocation, and refreshes
+  # them whenever the source content changes (extension upgrade). The user
+  # takes no action under the happy path.
+
+# No hooks block. The orchestrator runs only when the user invokes its
+# slash command directly; it does not auto-trigger from upstream lifecycle
+# events. Hooking it into, say, after_specify would defeat the orchestrator's
+# whole purpose (the orchestrator IS the wrapper around specify, not a
+# follow-up to it). Spec-kit's existing hooks model is for workflow-phase
+# events (before_plan, after_implement, etc.), NOT install/uninstall
+# lifecycle — those events do not exist in spec-kit core, which is one of
+# the constraints driving the Path 3 (Decision 6 + Decision 9) choice.
+# The seven per-phase optional hooks consumed by upstream commands like
+# `/speckit.plan` are NOT this extension's concern — those are registered
+# under upstream extensions or under user-installed third-party extensions,
+# not here. This extension neither provides nor consumes such hooks.
+
+tags:
+  - "orchestrator"
+  - "subagent"
+  - "workflow"
+  - "claude-code"
+
+# No `defaults` block. No `config` block. No `agents` block. Every payload
+# file the extension ships lives under the extension's directory and is
+# either (a) referenced by `provides.commands[].file` above, (b) invoked
+# by the orchestrator command body via an installed path
+# (`.specify/extensions/subagent-flow/scripts/bash/...`), or (c) read by
+# the orchestrator's inline bootstrap as the SOURCE of the cmp+cp loop that
+# populates `.claude/agents/` on first invocation.
