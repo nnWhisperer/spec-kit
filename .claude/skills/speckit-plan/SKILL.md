@@ -101,6 +101,10 @@ You **MUST** consider the user input before proceeding (if not empty).
        ```
    - If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
 
+## Library Documentation Lookup
+
+When the spec or plan involves any library, framework, SDK, or CLI tool — even one you think you know — invoke the `find-docs` skill via the Skill tool with the library name and your specific question. Training-data knowledge of library APIs is frequently outdated. Always use for API syntax, configuration options, version compatibility/migration, setup instructions, and CLI tool usage. Skip only for refactoring, general programming concepts, or business-logic reasoning where no library API is in scope.
+
 ## Phases
 
 ### Phase 0: Outline & Research

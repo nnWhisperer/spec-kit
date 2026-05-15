@@ -238,6 +238,10 @@ After reporting, check if `.specify/extensions.yml` exists in the project root.
     ```
 - If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
 
+## Library Documentation Lookup
+
+If a finding hinges on whether a library claim in plan.md or tasks.md is currently accurate (e.g. a deprecated API, a renamed config option, a version pin that no longer exists), invoke the `find-docs` skill via the Skill tool with the library name and your specific question before reporting the finding. Do not use this skill speculatively — only when a specific claim's accuracy materially affects severity classification. Findings about consistency, duplication, or coverage do not require library lookups.
+
 ## Operating Principles
 
 ### Context Efficiency

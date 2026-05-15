@@ -1,7 +1,7 @@
 ---
 name: speckit-implement
 description: "Execute the implementation plan by processing and executing all tasks defined in tasks.md"
-tools: Read, Write, Edit, Bash, Glob, Grep, TodoWrite
+tools: Read, Write, Edit, Bash, Glob, Grep, TodoWrite, Skill
 ---
 
 <!-- AUTO-GENERATED from ../upstream-main/templates/commands/implement.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
@@ -85,6 +85,8 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **If all checklists are complete**:
      - Display the table showing all checklists passed
      - Automatically proceed to step 3
+
+**Library Documentation Lookup**: Before writing code that calls into any library, framework, SDK, or CLI tool — even one you think you know — invoke the `find-docs` skill via the Skill tool with the library name and your specific question. Training-data knowledge of library APIs is frequently outdated. Always use for API syntax, configuration options, version compatibility/migration, setup instructions, and CLI tool usage. Skip only for refactoring, general programming concepts, or business-logic debugging where no library API is in scope.
 
 3. Load and analyze the implementation context:
    - **REQUIRED**: Read tasks.md for the complete task list and execution plan

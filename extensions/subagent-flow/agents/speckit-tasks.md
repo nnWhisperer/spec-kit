@@ -1,7 +1,7 @@
 ---
 name: speckit-tasks
 description: "Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts."
-tools: Read, Write, Edit, Bash, Glob, Grep
+tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 ---
 
 <!-- AUTO-GENERATED from ../upstream-main/templates/commands/tasks.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
@@ -120,6 +120,10 @@ You **MUST** consider the user input before proceeding (if not empty).
        EXECUTE_COMMAND: {command}
        ```
    - If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
+
+## Library Documentation Lookup
+
+When the plan's tech stack references a library, framework, SDK, or CLI tool whose current setup, configuration, or task structure you are unsure about, invoke the `find-docs` skill via the Skill tool with the library name and your specific question (e.g. "how is project setup done for X?", "what tasks are typical for migrating to Y v3?"). Training-data knowledge of library APIs is frequently outdated. Skip only when no library API is in scope.
 
 Context for task generation: {ARGS}
 

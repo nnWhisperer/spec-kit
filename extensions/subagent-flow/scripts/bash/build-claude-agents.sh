@@ -58,9 +58,10 @@ SKIP_PHASES=(clarify constitution)
 # Notably, Agent is omitted from every phase to prevent recursive spawning.
 DEFAULT_TOOLS="Read, Write, Edit, Bash, Glob, Grep"
 declare -A PHASE_TOOLS=(
-  [plan]="Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch"
-  [implement]="Read, Write, Edit, Bash, Glob, Grep, TodoWrite"
-  [analyze]="Read, Bash, Glob, Grep"
+  [plan]="Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch, Skill"
+  [implement]="Read, Write, Edit, Bash, Glob, Grep, TodoWrite, Skill"
+  [tasks]="Read, Write, Edit, Bash, Glob, Grep, Skill"
+  [analyze]="Read, Bash, Glob, Grep, Skill"
   [taskstoissues]="Read, Bash, Glob, Grep"
 )
 

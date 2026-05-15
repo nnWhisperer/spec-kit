@@ -126,6 +126,10 @@ You **MUST** consider the user input before proceeding (if not empty).
        ```
    - If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
 
+## Library Documentation Lookup
+
+When the plan's tech stack references a library, framework, SDK, or CLI tool whose current setup, configuration, or task structure you are unsure about, invoke the `find-docs` skill via the Skill tool with the library name and your specific question (e.g. "how is project setup done for X?", "what tasks are typical for migrating to Y v3?"). Training-data knowledge of library APIs is frequently outdated. Skip only when no library API is in scope.
+
 Context for task generation: {ARGS}
 
 The tasks.md should be immediately executable - each task must be specific enough that an LLM can complete it without additional context.
