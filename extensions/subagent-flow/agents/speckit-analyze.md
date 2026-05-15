@@ -4,7 +4,7 @@ description: "Perform a non-destructive cross-artifact consistency and quality a
 tools: Read, Bash, Glob, Grep
 ---
 
-<!-- AUTO-GENERATED from templates/commands/analyze.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
+<!-- AUTO-GENERATED from ../upstream-main/templates/commands/analyze.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
 
 When invoked as a subagent, the orchestrator's invocation prompt is the value of `$ARGUMENTS` referenced below. Treat it as the user input.
 

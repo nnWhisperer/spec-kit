@@ -4,7 +4,7 @@ description: "Create or update the feature specification from a natural language
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
-<!-- AUTO-GENERATED from templates/commands/specify.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
+<!-- AUTO-GENERATED from ../upstream-main/templates/commands/specify.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
 
 When invoked as a subagent, the orchestrator's invocation prompt is the value of `$ARGUMENTS` referenced below. Treat it as the user input.
 
