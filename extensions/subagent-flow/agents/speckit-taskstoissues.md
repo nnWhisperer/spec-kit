@@ -4,7 +4,7 @@ description: "Convert existing tasks into actionable, dependency-ordered GitHub 
 tools: Read, Bash, Glob, Grep
 ---
 
-<!-- AUTO-GENERATED from templates/commands/taskstoissues.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
+<!-- AUTO-GENERATED from ../upstream-main/templates/commands/taskstoissues.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
 
 When invoked as a subagent, the orchestrator's invocation prompt is the value of `$ARGUMENTS` referenced below. Treat it as the user input.
 

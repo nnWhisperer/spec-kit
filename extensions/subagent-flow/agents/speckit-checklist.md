@@ -4,7 +4,7 @@ description: "Generate a custom checklist for the current feature based on user 
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
-<!-- AUTO-GENERATED from templates/commands/checklist.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
+<!-- AUTO-GENERATED from ../upstream-main/templates/commands/checklist.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
 
 When invoked as a subagent, the orchestrator's invocation prompt is the value of `$ARGUMENTS` referenced below. Treat it as the user input.
 

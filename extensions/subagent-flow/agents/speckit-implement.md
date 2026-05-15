@@ -4,7 +4,7 @@ description: "Execute the implementation plan by processing and executing all ta
 tools: Read, Write, Edit, Bash, Glob, Grep, TodoWrite
 ---
 
-<!-- AUTO-GENERATED from templates/commands/implement.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
+<!-- AUTO-GENERATED from ../upstream-main/templates/commands/implement.md by scripts/bash/build-claude-agents.sh. Do not edit by hand. -->
 
 When invoked as a subagent, the orchestrator's invocation prompt is the value of `$ARGUMENTS` referenced below. Treat it as the user input.
 
