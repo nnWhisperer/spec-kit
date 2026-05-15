@@ -1,3 +1,11 @@
+To install this version in a new folder, cd into the target folder:
+```bash
+specify init --here
+git clone https://github.com/nnWhisperer/spec-kit /tmp/spec-kit
+specify extension add --dev /tmp/spec-kit/extensions/subagent-flow
+```
+
+
 <div align="center">
     <img src="./media/logo_large.webp" alt="Spec Kit Logo" width="200" height="200"/>
     <h1>🌱 Spec Kit</h1>
