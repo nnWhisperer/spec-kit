@@ -1,5 +1,5 @@
 ---
-description: Run the per-feature orchestrator end-to-end (specify → clarify → plan → tasks → optional analyze → implement).
+description: Run the per-feature orchestrator end-to-end (specify → clarify → plan → tasks → analyze → implement).
 ---
 
 # Speckit flow
@@ -49,13 +49,13 @@ $ARGUMENTS
 
 You are orchestrating spec-kit's **per-feature** workflow:
 
-**specify → clarify → plan → tasks → (analyze, optional) → implement**
+**specify → clarify → plan → tasks → analyze → implement**
 
 Non-interactive phases run in isolated subagents via the `Agent` tool with `subagent_type=speckit-<phase>` (loaded from `.claude/agents/speckit-<phase>.md`). The interactive `clarify` phase is **not** a subagent — you invoke it via the `Skill` tool so its body expands inline in this main session, where it has access to the full conversational context (the spec content, what `specify` produced, any side discussion) to ask well-informed questions and reply to the user's follow-ups in detail. Disk artifacts under `specs/<NNN-feature>/` are the source of truth — re-check them between phases instead of trusting each subagent's returned message.
 
 ## Input
 
-`$ARGUMENTS` is the **feature specification text** — the same kind of input you would pass directly to `/speckit-specify`. Forward it verbatim to the specify subagent in Phase 1. Do **not** parse it into sub-fields. Tech-stack choices and the decision to run `analyze` are collected interactively at their respective phases below.
+`$ARGUMENTS` is the **feature specification text** — the same kind of input you would pass directly to `/speckit-specify`. Forward it verbatim to the specify subagent in Phase 1. Do **not** parse it into sub-fields. Tech-stack choices are collected interactively in Phase 3; `analyze` always runs (Phase 5) without prompting.
 
 If `$ARGUMENTS` is empty, ask the user for the feature specification before proceeding.
 
@@ -84,15 +84,15 @@ Do **not** try to invoke clarify as a subagent. It must run inline to retain con
 1. Invoke `Agent` with `subagent_type=speckit-tasks`. The prompt can be terse, e.g. `"Break the plan into dependency-ordered tasks."`
 2. Verify `tasks.md` exists. Stop on failure.
 
-## Phase 5 — analyze (optional)
+## Phase 5 — analyze (always on)
 
-Ask: "Run the analyze pass before implementing? (y/N)". If yes:
+This phase runs unconditionally — no user prompt. When in doubt, do it; the cost of an analyze pass is small versus implementing against an inconsistent plan.
 
 1. Invoke `Agent` with `subagent_type=speckit-analyze`.
-2. Present its returned summary to the user.
-3. Ask whether to address findings now (which means looping back to `plan` or `tasks` — re-invoke that phase's subagent with the corrective context) or proceed to implement.
+2. Present its returned findings table to the user verbatim, so any CRITICAL/HIGH items are visible before the implement loop starts.
+3. Proceed automatically to Phase 6. Do **not** ask whether to address findings first — if the user wants to remediate they can interrupt this turn (Ctrl+C) after seeing the findings; otherwise the implement loop runs against the current `plan.md` / `tasks.md`.
 
-If no, go straight to phase 6.
+Rationale: prior versions gated this phase behind two `AskUserQuestion`s (run-or-skip, then address-or-proceed). In practice users almost always wanted analyze to run, and the gate added friction without protecting against anything the post-findings display doesn't already surface. Making it unconditional aligns Phase 5 with Phase 6's "no `AskUserQuestion` inside the loop" stance.
 
 ## Phase 6 — implement
 
