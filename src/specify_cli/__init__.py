@@ -229,9 +229,10 @@ def _install_shared_infra(
 ) -> bool:
     """Install shared infrastructure files into *project_path*.
 
-    Copies ``.specify/scripts/`` and ``.specify/templates/`` from the
-    bundled core_pack or source checkout.  Tracks all installed files
-    in ``speckit.manifest.json``.
+    Copies ``.specify/scripts/<variant>/`` and ``.specify/templates/`` from
+    the bundled core_pack or source checkout, where ``<variant>`` is
+    ``bash`` when *script_type* is ``"sh"`` and ``powershell`` when it is
+    ``"ps"``.  Tracks all installed files in ``speckit.manifest.json``.
 
     Page templates are processed to resolve ``__SPECKIT_COMMAND_<NAME>__``
     placeholders using *invoke_separator* (``"."`` for markdown agents,
@@ -1155,14 +1156,58 @@ def check():
     if not any(agent_results.values()):
         console.print("[dim]Tip: Install a coding agent for the best experience[/dim]")
 
+
+def _feature_capabilities() -> dict[str, bool]:
+    """Return stable local CLI capability flags for humans and agents."""
+    return {
+        "controlled_multi_install_integrations": True,
+        "integration_use_command": True,
+        "multi_install_safe_registry_metadata": True,
+        "integration_upgrade_command": True,
+        "self_check_command": True,
+        "workflow_catalog": True,
+        "bundled_templates": True,
+    }
+
+
 @app.command()
-def version():
+def version(
+    features: bool = typer.Option(
+        False,
+        "--features",
+        help="Show local CLI feature capabilities.",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit feature capabilities as JSON. Requires --features.",
+    ),
+):
     """Display version and system information."""
     import platform
 
-    show_banner()
-
     cli_version = get_speckit_version()
+
+    if json_output and not features:
+        console.print("[red]Error:[/red] --json requires --features.")
+        raise typer.Exit(1)
+
+    if features:
+        capabilities = _feature_capabilities()
+        if json_output:
+            payload = {"version": cli_version, "features": capabilities}
+            console.print(json.dumps(payload, indent=2))
+            return
+
+        console.print(f"Spec Kit CLI: {cli_version}")
+        console.print()
+        console.print("Features:")
+        for key, enabled in capabilities.items():
+            label = key.replace("_", " ")
+            console.print(f"- {label}: {'yes' if enabled else 'no'}")
+        return
+
+    show_banner()
 
     info_table = Table(show_header=False, box=None, padding=(0, 2))
     info_table.add_column("Key", style="cyan", justify="right")
@@ -1696,10 +1741,18 @@ def integration_install(
 
     if key in installed_keys:
         console.print(f"[yellow]Integration '{key}' is already installed.[/yellow]")
+        if default_key == key:
+            console.print("It is already the default integration.")
+        else:
+            console.print(
+                f"To make it the default integration, run "
+                f"[cyan]specify integration use {key}[/cyan]."
+            )
         console.print(
-            f"Run [cyan]specify integration upgrade {key}[/cyan] to reinstall managed files, "
-            f"or [cyan]specify integration uninstall {key}[/cyan] first."
+            f"To refresh its managed files or options, run "
+            f"[cyan]specify integration upgrade {key}[/cyan]."
         )
+        console.print("No files were changed.")
         raise typer.Exit(0)
 
     if installed_keys and not force:
@@ -1719,8 +1772,12 @@ def integration_install(
                 "integrations are declared multi-install safe."
             )
             console.print(
-                f"Run [cyan]specify integration switch {key}[/cyan] to replace the default "
-                f"integration, or retry with [cyan]--force[/cyan] to opt in."
+                f"To replace the default integration, run "
+                f"[cyan]specify integration switch {key}[/cyan]."
+            )
+            console.print(
+                f"To install '{key}' alongside the existing integrations anyway, "
+                "retry the same install command with [cyan]--force[/cyan]."
             )
             raise typer.Exit(1)
 
