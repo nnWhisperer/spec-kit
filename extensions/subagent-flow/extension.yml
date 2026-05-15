@@ -47,7 +47,7 @@ provides:
   commands:
     - name: "speckit.subagent-flow.run"
       file: "commands/speckit.subagent-flow.run.md"
-      description: "Run the per-feature orchestrator end-to-end (specify → clarify → plan → tasks → optional analyze → implement)."
+      description: "Run the per-feature orchestrator end-to-end (specify → clarify → plan → tasks → analyze → implement)."
 
   # No `config` block: the extension ships no config file. Behaviour is fully
   # determined by the orchestrator body and the project's existing layout.
