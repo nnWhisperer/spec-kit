@@ -1,12 +1,12 @@
 ---
-description: Run the per-feature orchestrator end-to-end (specify → clarify → plan → tasks → optional analyze → implement).
+description: Run the per-feature orchestrator end-to-end (specify → clarify → plan → tasks → analyze → implement).
 ---
 
 # Speckit flow
 
-## Phase 0 — bootstrap subagent files (silent unless install corrupted)
+## STEP 0 — REQUIRED FIRST ACTION (do not skip, do not defer)
 
-Before any other step in this command, run the following Bash block **once**, from the project root, via the `Bash` tool. It silently deploys the seven baked subagent files from the extension's source directory into `.claude/agents/` so that the `Agent` tool calls in later phases can resolve `subagent_type=speckit-<phase>`. Under the happy path (fresh install or up-to-date deployed copies) it produces no output and exits 0; under stale-deploy or missing-deployed-copy it silently `cp`s the source over the deployed copy and exits 0. The only user-visible failure path is "source directory missing or partial" (interrupted install / hand-deleted extension dir), in which case the block emits a multiline error pointing at the recovery command and exits 1 — do **not** invoke any subagent in that case; surface the error verbatim and stop.
+**Your FIRST tool call in this turn MUST be the `Bash` tool running the script below.** Do not read further before issuing it. Do not call `Agent`, `Skill`, `Read`, `AskUserQuestion`, or any other tool first. Do not paraphrase $ARGUMENTS or acknowledge the user before this runs. The script deploys the subagent files this orchestrator needs into `.claude/agents/`; without it, every later `Agent` invocation in this turn will fail with "agent not found."
 
 ```bash
 SRC=.specify/extensions/subagent-flow/agents
@@ -37,9 +37,19 @@ for p in specify plan tasks analyze implement checklist taskstoissues; do
   fi
   cmp -s "$s" "$d" || cp "$s" "$d"
 done
+echo "speckit-flow bootstrap: subagent files deployed to .claude/agents/"
 ```
 
-After this block completes with exit 0, proceed to Phase 1 below. The block is intentionally inline (not a separate script) so the bootstrap is visible to anyone reading the orchestrator body, and so it shares the body's "verbatim with three edits" provenance from the fork's original `/speckit-flow` command.
+### Verification gate (mandatory)
+
+After the `Bash` tool returns, before invoking any subagent, you MUST verify **both**:
+
+1. The `Bash` tool's exit code is `0`.
+2. The final line of stdout is exactly: `speckit-flow bootstrap: subagent files deployed to .claude/agents/`
+
+If either check fails, STOP immediately. Surface the script's stderr to the user verbatim and do not invoke any subagent. Do not attempt to self-recover (e.g. by trying `specify extension add` yourself, or by retrying the script with modifications) — the recovery is the user's responsibility per the error message.
+
+Only after both checks pass, proceed to Phase 1.
 
 The user's input is below.
 
@@ -49,13 +59,13 @@ $ARGUMENTS
 
 You are orchestrating spec-kit's **per-feature** workflow:
 
-**specify → clarify → plan → tasks → (analyze, optional) → implement**
+**specify → clarify → plan → tasks → analyze → implement**
 
 Non-interactive phases run in isolated subagents via the `Agent` tool with `subagent_type=speckit-<phase>` (loaded from `.claude/agents/speckit-<phase>.md`). The interactive `clarify` phase is **not** a subagent — you invoke it via the `Skill` tool so its body expands inline in this main session, where it has access to the full conversational context (the spec content, what `specify` produced, any side discussion) to ask well-informed questions and reply to the user's follow-ups in detail. Disk artifacts under `specs/<NNN-feature>/` are the source of truth — re-check them between phases instead of trusting each subagent's returned message.
 
 ## Input
 
-`$ARGUMENTS` is the **feature specification text** — the same kind of input you would pass directly to `/speckit-specify`. Forward it verbatim to the specify subagent in Phase 1. Do **not** parse it into sub-fields. Tech-stack choices and the decision to run `analyze` are collected interactively at their respective phases below.
+`$ARGUMENTS` is the **feature specification text** — the same kind of input you would pass directly to `/speckit-specify`. Forward it verbatim to the specify subagent in Phase 1. Do **not** parse it into sub-fields. Tech-stack choices are collected interactively in Phase 3; `analyze` always runs (Phase 5) without prompting.
 
 If `$ARGUMENTS` is empty, ask the user for the feature specification before proceeding.
 
@@ -84,15 +94,15 @@ Do **not** try to invoke clarify as a subagent. It must run inline to retain con
 1. Invoke `Agent` with `subagent_type=speckit-tasks`. The prompt can be terse, e.g. `"Break the plan into dependency-ordered tasks."`
 2. Verify `tasks.md` exists. Stop on failure.
 
-## Phase 5 — analyze (optional)
+## Phase 5 — analyze (always on)
 
-Ask: "Run the analyze pass before implementing? (y/N)". If yes:
+This phase runs unconditionally — no user prompt. When in doubt, do it; the cost of an analyze pass is small versus implementing against an inconsistent plan.
 
 1. Invoke `Agent` with `subagent_type=speckit-analyze`.
-2. Present its returned summary to the user.
-3. Ask whether to address findings now (which means looping back to `plan` or `tasks` — re-invoke that phase's subagent with the corrective context) or proceed to implement.
+2. Present its returned findings table to the user verbatim, so any CRITICAL/HIGH items are visible before the implement loop starts.
+3. Proceed automatically to Phase 6. Do **not** ask whether to address findings first — if the user wants to remediate they can interrupt this turn (Ctrl+C) after seeing the findings; otherwise the implement loop runs against the current `plan.md` / `tasks.md`.
 
-If no, go straight to phase 6.
+Rationale: prior versions gated this phase behind two `AskUserQuestion`s (run-or-skip, then address-or-proceed). In practice users almost always wanted analyze to run, and the gate added friction without protecting against anything the post-findings display doesn't already surface. Making it unconditional aligns Phase 5 with Phase 6's "no `AskUserQuestion` inside the loop" stance.
 
 ## Phase 6 — implement
 

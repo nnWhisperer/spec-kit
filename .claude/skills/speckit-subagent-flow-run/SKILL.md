@@ -10,9 +10,9 @@ metadata:
 
 # Speckit flow
 
-## Phase 0 — bootstrap subagent files (silent unless install corrupted)
+## STEP 0 — REQUIRED FIRST ACTION (do not skip, do not defer)
 
-Before any other step in this command, run the following Bash block **once**, from the project root, via the `Bash` tool. It silently deploys the seven baked subagent files from the extension's source directory into `.claude/agents/` so that the `Agent` tool calls in later phases can resolve `subagent_type=speckit-<phase>`. Under the happy path (fresh install or up-to-date deployed copies) it produces no output and exits 0; under stale-deploy or missing-deployed-copy it silently `cp`s the source over the deployed copy and exits 0. The only user-visible failure path is "source directory missing or partial" (interrupted install / hand-deleted extension dir), in which case the block emits a multiline error pointing at the recovery command and exits 1 — do **not** invoke any subagent in that case; surface the error verbatim and stop.
+**Your FIRST tool call in this turn MUST be the `Bash` tool running the script below.** Do not read further before issuing it. Do not call `Agent`, `Skill`, `Read`, `AskUserQuestion`, or any other tool first. Do not paraphrase $ARGUMENTS or acknowledge the user before this runs. The script deploys the subagent files this orchestrator needs into `.claude/agents/`; without it, every later `Agent` invocation in this turn will fail with "agent not found."
 
 ```bash
 SRC=.specify/extensions/subagent-flow/agents
@@ -43,9 +43,19 @@ for p in specify plan tasks analyze implement checklist taskstoissues; do
   fi
   cmp -s "$s" "$d" || cp "$s" "$d"
 done
+echo "speckit-flow bootstrap: subagent files deployed to .claude/agents/"
 ```
 
-After this block completes with exit 0, proceed to Phase 1 below. The block is intentionally inline (not a separate script) so the bootstrap is visible to anyone reading the orchestrator body, and so it shares the body's "verbatim with three edits" provenance from the fork's original `/speckit-flow` command.
+### Verification gate (mandatory)
+
+After the `Bash` tool returns, before invoking any subagent, you MUST verify **both**:
+
+1. The `Bash` tool's exit code is `0`.
+2. The final line of stdout is exactly: `speckit-flow bootstrap: subagent files deployed to .claude/agents/`
+
+If either check fails, STOP immediately. Surface the script's stderr to the user verbatim and do not invoke any subagent. Do not attempt to self-recover (e.g. by trying `specify extension add` yourself, or by retrying the script with modifications) — the recovery is the user's responsibility per the error message.
+
+Only after both checks pass, proceed to Phase 1.
 
 The user's input is below.
 
