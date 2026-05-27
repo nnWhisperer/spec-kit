@@ -1,20 +1,18 @@
-# Maintainer-side workflow: keep an upstream-tracking branch on origin in sync
-# with `github/spec-kit:main`, then re-bake the seven subagent-flow agent files
-# from that tracked content and surface drift via PR.
+# Maintainer-side workflow: re-bake the seven subagent-flow agent files against
+# the current tip of `github/spec-kit:main` and surface drift via PR.
 #
-# Two-branch model:
-#   - origin/main          — fork's working main (extension lives here)
-#   - origin/upstream-main — pure mirror of `github/spec-kit:main`, force-pushed
-#                            by this workflow; bot-owned, no other writers
-#
-# Each run: (1) mirror upstream/main → origin/upstream-main, (2) check out
-# upstream-main in a worktree, (3) run the generator against the worktree's
-# templates/commands/, (4) detect drift against main's
-# extensions/subagent-flow/agents/, (5) open a PR if drift detected.
+# Each run: (1) fetch `github/spec-kit:main` into a worktree at the upstream
+# SHA, (2) run the generator against the worktree's templates/commands/,
+# (3) detect drift against main's extensions/subagent-flow/agents/, (4) open
+# a PR if drift detected.
 #
 # This decouples upstream drift detection from the fork's merge cadence — even
 # if main has never merged upstream, the resync PRs keep the baked agents fresh
 # against whatever upstream currently is.
+#
+# No mirror branch is pushed: the default GITHUB_TOKEN cannot push changes
+# under .github/workflows/, which upstream now updates, so we read upstream
+# in-runner instead of mirroring it to origin.
 #
 # act-compatible (constraint #1):
 #   - `workflow_dispatch` is the primary trigger (works under act);
@@ -40,10 +38,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      # Required so the mirror push can carry upstream changes under
-      # .github/workflows/ (GitHub blocks workflow writes without this scope,
-      # even on a force-push to a bot-owned mirror branch).
-      workflows: write
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -55,18 +49,17 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Mirror upstream/main → origin/upstream-main
+      - name: Fetch upstream/main into a worktree
+        id: upstream
         run: |
           git remote add upstream https://github.com/github/spec-kit.git
           git fetch upstream main
-          # Force-push because upstream-main is a pure mirror branch.
-          # Nothing else writes to it; force is intended.
-          git push origin upstream/main:refs/heads/upstream-main --force
-
-      - name: Check out upstream-main in a worktree
-        run: |
-          git fetch origin upstream-main
-          git worktree add ../upstream-main upstream-main
+          upstream_sha=$(git rev-parse FETCH_HEAD)
+          echo "sha=$upstream_sha" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${upstream_sha:0:12}" >> "$GITHUB_OUTPUT"
+          # Detached worktree at the upstream SHA. Path is kept as
+          # ../upstream-main to match the SRC_DIR used by the next step.
+          git worktree add --detach ../upstream-main "$upstream_sha"
 
       - name: Re-bake agents from upstream-main templates
         env:
@@ -94,11 +87,11 @@ jobs:
           title: "chore(subagent-flow): resync agents against upstream"
           body: |
             Automated re-bake of `extensions/subagent-flow/agents/` against
-            `upstream-main` (a mirror of `github/spec-kit:main` maintained by
-            the `subagent-flow agents resync` workflow).
+            `github/spec-kit:main`.
 
-            Compare upstream drift:
-            https://github.com/nnWhisperer/spec-kit/compare/main...upstream-main
+            Baked against upstream commit:
+            https://github.com/github/spec-kit/commit/${{ steps.upstream.outputs.sha }}
+            (`${{ steps.upstream.outputs.short_sha }}`)
 
             Review the diff to confirm the upstream changes are intended
             before merging.
