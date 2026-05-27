@@ -40,6 +40,10 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      # Required so the mirror push can carry upstream changes under
+      # .github/workflows/ (GitHub blocks workflow writes without this scope,
+      # even on a force-push to a bot-owned mirror branch).
+      workflows: write
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
